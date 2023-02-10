@@ -1,0 +1,30 @@
+name: angular ui image
+
+on:
+  push:
+    branch: "feature/frontend"
+
+env:
+  DEPLOYMENT_NAME: angular-ui-deployment
+  NZT_IMAGE_NAME: ghcr.io/angular-ui
+  TAG: dev-ft-0.0.1
+
+
+jobs:
+  build-and-push:    
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository 
+        uses: actions/checkout@v2    
+
+      - name: Build Docker Image
+        run: |
+          docker build -t "$NZT_IMAGE_NAME:$TAG" -f Dockerfile .
+          docker tag $NZT_IMAGE_NAME:$TAG $NZT_IMAGE_NAME:latest
+          
+      - name: Push docker image to conatiner registory
+        run: |
+          # docker login ghcr.io -u ${{ secrets.GH_SERVICE_ACCOUNT }} -p ${{ secrets.ASHFORD_GH_DOCKER_CONTAINER_REGISTERY }}
+          docker login ghcr.io -u ${{ secrets.GHCR_SERVICE_ACCOUNT }} -p ${{ secrets.GHCR_SERVICE_TOKEN }}
+          echo "pushing docker image in ghcr $NZT_IMAGE_NAME:$TAG"
+          docker push $NZT_IMAGE_NAME:$TAG
