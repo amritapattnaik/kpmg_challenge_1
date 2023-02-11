@@ -1,0 +1,8 @@
+bases:
+  - ../../../base/
+
+namespace: ang-ui
+
+images:
+  - name: ghcr.io/angular-ui:dev-ft-0.0.1 
+    newTag: dev-ft-0.0.1

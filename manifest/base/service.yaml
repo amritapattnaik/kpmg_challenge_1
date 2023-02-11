@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ang-ui-svc
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  selector:
+    app: ang-ui
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

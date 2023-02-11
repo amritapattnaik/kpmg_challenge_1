@@ -1,0 +1,59 @@
+name:ang portal ui Deployment
+
+on:
+  push:
+    branches: [feature/deploy]
+
+jobs:
+  ang-ui-deployment:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:latest
+
+   
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v2        
+
+      - name: Setup Python and jq
+        run: |
+          apt-get -y update 
+          apt-get -y install python3 python3-pip curl jq      
+
+      - name: Set up Google Cloud SDK environment
+        uses: google-github-actions/setup-gcloud@v0.2.0
+        with:
+          service_account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+          export_default_credentials: true
+
+      - name: Install kubectl
+        run: |
+          gcloud components install kubectl
+
+      - name: check gcloud list
+        run: gcloud components update
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash        
+          mv kustomize /bin/.
+
+      # load cluster config to kubeconfig
+      - name: load-kube-config
+        run: |
+          WORFLOW_VAR_PATH=manifests/overlays/${GITHUB_REF#*/*/}/workflow.vars.json
+          CLUSTER_NAME="$(jq -r .cluster_name $WORFLOW_VAR_PATH)"
+          REGION="$(jq -r .region $WORFLOW_VAR_PATH)"
+          ZONE="$(jq -r .zone $WORFLOW_VAR_PATH)"
+          echo "ClusterName: $CLUSTER_NAME"
+          PROJECT_ID="$(jq .project_id $WORFLOW_VAR_PATH)"     
+          gcloud config set project $(echo $PROJECT_ID | sed 's/"//g')
+          gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION || gcloud container clusters get-credentials $CLUSTER_NAME --zone $ZONE
+
+   
+      - name: Deploy ang-ui deployment
+        run: |
+          echo ${GITHUB_REF#*/*/}          
+          # kustomize build manifests/overlays/${GITHUB_REF#*/*/}         
+          kustomize build manifests/overlays/${GITHUB_REF#*/*/} | kubectl apply -f -

@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+	kind: Deployment
+	metadata:
+	  name: ang-ui
+	spec:
+	  replicas: 1
+	  selector:
+	    matchLabels:
+	      app: ang-ui
+	  template:
+	    metadata:
+	      labels:
+	        app: ang-ui
+	    spec:
+	      imagePullSecrets:
+	      - name: ghcr-credentials
+	      containers:
+	      - name: dda-ui
+	        image: ghcr.io/angular-ui:dev-ft-0.0.1   
+	        imagePullPolicy: Always
+	        ports:
+	        - containerPort: 80
+	        readinessProbe:
+	          httpGet:
+	            path: /
+	            port: 80
+	          initialDelaySeconds: 5
+	          periodSeconds: 5
+	
+
+
+
+

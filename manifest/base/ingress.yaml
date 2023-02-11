@@ -1,0 +1,39 @@
+	apiVersion: networking.gke.io/v1
+	kind: ManagedCertificate
+	metadata:
+	  name: ang-ui-cert
+	spec:
+	  domains:
+	    - ang-ui.com
+	---
+	apiVersion: networking.k8s.io/v1
+	kind: Ingress
+	metadata:
+	  name: ang-ui-ingress
+	  annotations:
+	    kubernetes.io/ingress.class: "gce"
+	    # kubernetes.io/ingress.allow-http: "false"
+	    networking.gke.io/managed-certificates: ang-ui-cert
+	    networking.gke.io/v1beta1.FrontendConfig: my-frontend-config
+	    kubernetes.io/ingress.global-static-ip-name: "ang-ui-external-ip"
+	spec:
+	  rules:
+	   - host: ang-ui.com
+	     http:
+	       paths:
+	         - path: /
+	           pathType: Prefix
+	           backend:
+	             service:
+	               name: ang-ui-svc
+	               port: 
+	                 number: 80
+	---
+	apiVersion: networking.gke.io/v1beta1
+	kind: FrontendConfig
+	metadata:
+	  name: my-frontend-config
+	spec:
+	  redirectToHttps:
+	    enabled: true
+	  sslPolicy: minimum-ssl
