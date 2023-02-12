@@ -1,0 +1,9 @@
+
+bases:
+  - ../../../base/
+
+namespace: spring-api
+
+images:
+  - name: ghcr.io/springboot-postgres
+    newTag: dev-ft-0.0.1 

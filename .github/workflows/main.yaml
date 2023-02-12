@@ -1,0 +1,73 @@
+name: api-k8s-deployment
+
+on:
+  push:
+    branches: [feature/deploy1]
+
+
+jobs:
+  nzt-api-deployment:
+    runs-on: ubuntu-latest
+    environment: development
+    container:
+      image: debian:latest
+
+
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v2        
+
+      - name: Setup Python and jq
+        run: |
+          apt-get -y update 
+          apt-get -y install python3 python3-pip curl jq
+
+      - name: Install requirement.txt
+        run: pip3 install -r .github/workflows/scripts/requirements.txt  
+
+      - name: replace value in deployment.yaml for the access key
+        run: python3 .github/workflows/scripts/replace_val_in_deployment.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          DB_USERNAME: ${{ secrets.POSTGRESQL_USER }}
+          DB_PASSWORD: ${{ secrets.POSTGRESQL_PASSWORD }}
+          # POSTGRESQL_HOST: ${{ secrets.POSTGRESQL_HOST }}
+
+      - name: Set up Google Cloud SDK environment
+        uses: google-github-actions/setup-gcloud@v0.2.0
+        with:
+          service_account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+          export_default_credentials: true
+
+      - name: Install kubectl
+        run: |
+          gcloud components install kubectl
+
+      - name: check gcloud list
+        run: gcloud components update
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash        
+          mv kustomize /bin/.
+
+      # load cluster config to kubeconfig
+      - name: load-kube-config
+        run: |
+          WORKFLOW_VAR_PATH=manifests/overlays/${GITHUB_REF#*/*/}/workflow.vars.json
+          CLUSTER_NAME="$(jq -r .cluster_name $WORKFLOW_VAR_PATH)"
+          REGION="$(jq -r .region $WORKFLOW_VAR_PATH)"
+          ZONE="$(jq -r .zone $WORKFLOW_VAR_PATH)"
+          echo "ClusterName: $CLUSTER_NAME"
+          PROJECT_ID="$(jq .project_id $WORKFLOW_VAR_PATH)"     
+          gcloud config set project $(echo $PROJECT_ID | sed 's/"//g')
+          gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION || gcloud container clusters get-credentials $CLUSTER_NAME --zone $ZONE
+
+      
+      - name: Deploy K8s cluster
+        run: |
+          # echo ${GITHUB_REF#*/*/}
+          # kustomize build manifests/overlays/${GITHUB_REF#*/*/} 
+          kustomize build manifests/overlays/${GITHUB_REF#*/*/} | kubectl apply -f -
