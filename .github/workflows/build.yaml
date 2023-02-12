@@ -1,0 +1,41 @@
+
+name: Build and push Image
+
+on:
+  push:
+    branches: [ "feature/backend" ]
+
+env:
+  IMAGE_NAME: ghcr.io/springboot-postgres
+  TAG: dev-ft-0.0.1
+
+jobs:
+  build-publish-image:
+    runs-on: ubuntu-latest
+    
+    steps:
+    
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: 8
+          distribution: 'temurin'
+          # server-id: github
+          settings-path: ${{ github.workspace }}
+          
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Build Docker Image
+        run: |
+          docker build -t "$IMAGE_NAME:$TAG" .
+          docker tag $IMAGE_NAME:$TAG $IMAGE_NAME:latest
+      
+      - name: Push docker image to ghcr
+        run: |
+          docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+          echo "pushing docker image in ghcr $IMAGE_NAME:$TAG"
+          docker push $IMAGE_NAME:$TAG
